@@ -26,15 +26,21 @@ def getHref(url):
     :param html: 分类的链接
     :return: 书籍的详情页面
     '''
-    html = urllib.urlopen(url).read()
-    soup = BeautifulSoup(html, 'html.parser')
-
-    h2 = []
     href = []
-    for i in range(len(soup.select('h2'))):
-        h2 = soup.select('h2')[i]
-        for j in range(len(h2.select('a'))):
-            href.append(h2.select('a')[j].get('href'))
+    heards = {'User-agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.91 Safari/537.36'}
+    request = urllib2.Request(url,headers= heards)
+    #print request
+    try:
+        html = urllib2.urlopen(request).read()
+        soup = BeautifulSoup(html, 'html.parser')
+
+
+        for i in range(len(soup.select('h2'))):
+            h2 = soup.select('h2')[i]
+            for j in range(len(h2.select('a'))):
+                href.append(h2.select('a')[j].get('href'))
+    except:
+        print 'err'
     return href
 
 Href = []
@@ -103,4 +109,3 @@ for i in Href:
 
 f.close()
 print '爬取完成'
-

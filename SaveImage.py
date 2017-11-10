@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-This is a scrpit for ...
+download bookinfo from www.douban.com
+save bookinfo to file 'book.txt'
 Author: Jachin
-Data: 2017- 11-
+Data: 2017- 11- 09
 '''
 
-
+#标签分类
 SortTag = ['小说','名著','历史','哲学','散文','诗歌','互联网','编程']
 
 SortUrl =[]
+#获取不同分类下的第一个页面，返回到SortUrl列表中
 for item in SortTag:
-    SortUrl.append('https://book.douban.com/tag/' + item)
+    SortUrl.append('http://book.douban.com/tag/' + item)
 
 #print SortUrl
 
 from bs4 import BeautifulSoup
-import urllib
+import urllib,urllib2
 import requests
 
 def getHref(url):
@@ -52,17 +54,22 @@ for i in SortUrl:
 ##################################
 d = {}
 def pa(html):
+    '''
+    爬取书籍的名字，作者，定价，ISBN，出版社，简介到字典d中
+    :param html: 书籍详情链接
+    :return: 字典d
+    '''
     global  d
     res = requests.get(html)
     s = BeautifulSoup(res.text,'html.parser')
+    imageurl = s.find_all('div',id = 'mainpic')[0].a.get('href')
+
+
     info = s.find_all('div',id='info')
-    name = s.find_all('h1')[0].span.text.encode('utf-8')
-    author = ''.join(s.find_all('div',id='info')[0].a.text.encode('utf-8').split('\n')).replace(' ', '')
-    intro = s.find_all('div',class_='intro')[0].text.encode('utf-8').replace(' ', '\n')
-    #intro = intro.replace('\n','')
 
     info = str(info[0].text.encode('utf-8')).replace(' ','')
     s1 = info.split('\n')
+
     for i in s1:
         try:
             (key,val) = i.split(':')
@@ -71,49 +78,39 @@ def pa(html):
             pass
 
     for i in d.keys():
-        if i not in ['ISBN','出版社','定价']:
+        if i not in ['ISBN']:
             del d[i]
-    d['简介'] = intro
-    d['作者'] = author
-    d['书名'] = name
-
+    d['imageurl'] = 'http:' + imageurl.split(':')[1]
     return d
 
-pa('https://book.douban.com/subject/25862578/')
+def SaveImage():
+    '''
+    下载书籍封面图片
+    '''
+    try:
+        urllib.urlretrieve(d['imageurl'],filename='E:\cover\%s.jpg'%d['ISBN'])
+    except:
+        pass
 
-insert_str = ''
-import random
-import pymssql
+#pa('https://book.douban.com/subject/26698660/')
+#SaveImage()
 
 
-conn = pymssql.connect(host='localhost:1433',user='sa',password='ghostttt',database='BookStore',charset="utf8")
-cur = conn.cursor()
-
+#开始爬取
+print '开始下载'
 c1 = 0
-for tag in Href:
-    print '爬%s类书籍：' % SortTag[c1]
+f = open('book.txt','a')
+for i in Href:
+    print '%s类书籍：'%SortTag[c1]
     c1 += 1
     c2 = 0
-    for bookinfo in tag:
-        ra = random.randint(50, 150)
+    for j in i:
         try:
-            pa(bookinfo)
-            if '展开全部' in d['简介']:#发现简介有’展开全部‘字样的跳过，因为这部分处理涉及JS
-                print '跳过'
-            else:
-                print '\t爬第 %d 本书'%c2
-                c2 += 1
-                insert = []
-                for i in d.keys():
-                    insert.append(d[i])
-                insert = '\'' + '\',\''.join(insert) + '\',\'' + SortTag[c1] + '\',%d' % ra
-                try:
-                    cur.execute('insert into book values(%s)' % insert)
-                except Exception as err:
-                    print err
+            pa(j)
+            SaveImage()
+            print '\t下载第 %d 本书封面'%c2
+            c2 += 1
         except:
             print '出错惹'
 
-cur.close()
-conn.commit()
-conn.close()
+print '下载完成'
